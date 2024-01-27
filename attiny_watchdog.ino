@@ -3,7 +3,7 @@
 // Second WDT timeout triggers POWERCYCLE.
 //
 // For use with ATTINY212-SSN or ATTINY412-SSN.
-// ATTINY212-SSN  (just barely fits - change to ATTINY412-SSN)
+// ATTINY412-SSN (originally ATTINY212-SSN - just barely fits)
 // Program using UPDI programmer.
 //
 // Pinout:
@@ -17,11 +17,17 @@
 // 8: GND
 // 
 // Set these options, so that the code fits in flash:
+//   clock: 8 MHz internal
+// . startup time: 8 msec
 //   millis() / micros() disabled
 //   printf() default.
 //   Wire:  master or slave
 //   BOD: 2.6V, enabled / enabled
 //   startup time: 8msec
+// . EEPROM retained
+// . WDT disabled / no delay
+// . PWM pins:  default
+// . attach interrupts: all
 //
 // Prerequisite libraries:
 //   megaAtTiny  https://github.com/SpenceKonde/megaTinyCore/

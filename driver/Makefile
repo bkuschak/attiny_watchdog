@@ -11,6 +11,7 @@ install:
 	make -C /lib/modules/$(shell uname -r)/build M=$(shell pwd) KERNELRELEASE=$(shell uname -r) modules_install
 	depmod -a
 	#update-initramfs -u
+	modprobe attiny_wdt
 
 clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(shell pwd) clean

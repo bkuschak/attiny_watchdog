@@ -18,16 +18,16 @@
 // 
 // Set these options, so that the code fits in flash:
 //   clock: 8 MHz internal
-// . startup time: 8 msec
+//   startup time: 8 msec
 //   millis() / micros() disabled
 //   printf() default.
 //   Wire:  master or slave
 //   BOD: 2.6V, enabled / enabled
 //   startup time: 8msec
-// . EEPROM retained
-// . WDT disabled / no delay
-// . PWM pins:  default
-// . attach interrupts: all
+//   EEPROM retained
+//   WDT disabled / no delay
+//   PWM pins:  default
+//   attach interrupts: all
 //
 // Prerequisite libraries:
 //   megaAtTiny  https://github.com/SpenceKonde/megaTinyCore/
@@ -45,29 +45,33 @@
 #include "ATtiny_TimerInterrupt.h"
 #include "ATtiny_ISR_Timer.h"
 
-#define FW_VERSION    0x10              // 4.4 bits major.minor.
+#define FW_VERSION                  0x10      // 4.4 bits major.minor.
+
+// Pin assignments:
+#define PORTA_PIN_RESET             (1<<3)
+#define PORTA_PIN_ALERT             (1<<6)
+#define PORTA_PIN_POWERCYCLE        (1<<7)
+
+#define I2C_SLAVE_ADDR              0x32      // our addr as a slave.
+
+// WDT timer period = 256 * WDT_TICK_INTERVAL_MSEC.
+#define WDT_TICK_INTERVAL_MSEC      250       // 64 seconds timeout, 
 
 #define ENABLE_CONFIG_REGISTER
 
 // Register addresses
-#define REG_VERSION           0         // read only
-#define REG_CONFIG            1         // config
-#define REG_WDT               2         // refresh the watchdog
+#define REG_VERSION                 0         // read only
+#define REG_CONFIG                  1         // config
+#define REG_WDT                     2         // refresh the watchdog
 
 // REG_CONFIG bits:
 #define CONFIG_ENABLE_RESET         (1<<0)
 #define CONFIG_ENABLE_POWERCYCLE    (1<<1)
 #define CONFIG_ENABLE_ALERT         (1<<2)
 
-#define I2C_SLAVE_ADDR              0x32            // our addr as a slave.
-
-// WDT timer period = 256 * WDT_TICK_INTERVAL_MSEC
-#define WDT_TICK_INTERVAL_MSEC      250             // 64 seconds timeout, 
-
 uint8_t wdt_counter = ~0;   // Default timeout is 256 ticks.
 uint8_t wdt_expirations;
 uint8_t register_pointer;
-//uint8_t latched_portc_intflags;
 
 // By default enable ALERT and POWERCYCLE
 uint8_t config_reg = CONFIG_ENABLE_ALERT | CONFIG_ENABLE_POWERCYCLE;
@@ -75,46 +79,46 @@ uint8_t config_reg = CONFIG_ENABLE_ALERT | CONFIG_ENABLE_POWERCYCLE;
 // RESET is PA3, active high.
 void assert_reset() 
 {
-  PORTA.OUT |= (1<<3);
-  PORTA.DIR |= (1<<3);
+  PORTA.OUT |= PORTA_PIN_RESET;
+  PORTA.DIR |= PORTA_PIN_RESET;
 }
 
 void deassert_reset() 
 {
-  PORTA.OUT &= ~(1<<3);
-  PORTA.DIR |= (1<<3);
+  PORTA.OUT &= ~PORTA_PIN_RESET;
+  PORTA.DIR |= PORTA_PIN_RESET;
 }
 
 // POWERCYCLE is PA7, active high.
 void assert_powercycle() 
 {
-  PORTA.OUT |= (1<<7);
-  PORTA.DIR |= (1<<7);
+  PORTA.OUT |= PORTA_PIN_POWERCYCLE;
+  PORTA.DIR |= PORTA_PIN_POWERCYCLE;
 }
 
 void deassert_powercycle() 
 {
-  PORTA.OUT &= ~(1<<7);
-  PORTA.DIR |= (1<<7);
+  PORTA.OUT &= ~PORTA_PIN_POWERCYCLE;
+  PORTA.DIR |= PORTA_PIN_POWERCYCLE;
 }
 
 // ALERT is PA6, active high.
 void assert_alert() 
 {
-  PORTA.OUT |= (1<<6);
-  PORTA.DIR |= (1<<6);
+  PORTA.OUT |= PORTA_PIN_ALERT;
+  PORTA.DIR |= PORTA_PIN_ALERT;
 }
 
 void deassert_alert() 
 {
-  PORTA.OUT &= ~(1<<6);
-  PORTA.DIR |= (1<<6);
+  PORTA.OUT &= ~PORTA_PIN_ALERT;
+  PORTA.DIR |= PORTA_PIN_ALERT;
 }
 
 // I2C slave mode write.
 void i2c_receive_event(int howMany) 
 {
-  // First byte is address
+  // First byte is address.
   if(Wire.available())
     register_pointer = Wire.read();
 
@@ -133,7 +137,7 @@ void i2c_receive_event(int howMany)
     case REG_WDT:
       cli();    // critical section
       wdt_counter = data;
-      // Also deassert any pending alert
+      // Also deassert any pending alert.
       deassert_alert();
       sei();
       break;
@@ -145,7 +149,7 @@ void i2c_receive_event(int howMany)
       break;
 #endif
     default:
-      // ignore - other registers are read-only.
+      // Ignore - other registers are read-only.
       break;
   }
 }
@@ -212,13 +216,9 @@ void timer_handler()
 
 void setup() 
 {
-  // Port A
+  // Clear outputs.
   PORTA.OUT = 0;
-  PORTA.DIR = (1<<3) | (1<<6) | (1<<7);
-  
-  //deassert_powercycle();
-  //deassert_reset();
-  //deassert_alert();
+  PORTA.DIR = PORTA_PIN_RESET | PORTA_PIN_ALERT | PORTA_PIN_POWERCYCLE;
 
   // Set I2C slave mode.
   Wire.begin(I2C_SLAVE_ADDR);
